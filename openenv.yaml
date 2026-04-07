@@ -1,0 +1,13 @@
+name: enterprise-dba-agent
+version: 1.0.0
+description: A real-world database administrator environment where AI optimizes NoSQL schemas, manages RAM, and ensures data safety.
+api:
+  type: rest
+  port: 7860
+tasks:
+  - name: task_1_safe_cleanup
+    difficulty: easy
+  - name: task_2_n_plus_1_fix
+    difficulty: medium
+  - name: task_3_compound_index
+    difficulty: hard
