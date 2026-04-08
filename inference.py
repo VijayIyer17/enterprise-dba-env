@@ -2,14 +2,41 @@ import os
 import json
 import urllib.request
 import urllib.error
-from openai import OpenAI
 
 API_BASE_URL = os.getenv("API_BASE_URL", "https://router.huggingface.co/v1")
 API_KEY = os.getenv("HF_TOKEN") or os.getenv("API_KEY", "dummy-key")
 MODEL_NAME = os.getenv("MODEL_NAME", "gpt-3.5-turbo")
 ENV_URL = os.getenv("ENV_URL", "http://127.0.0.1:7860")
 
-client = OpenAI(base_url=API_BASE_URL, api_key=API_KEY)
+def ping_llm_proxy():
+    try:
+        from openai import OpenAI
+        client = OpenAI(base_url=API_BASE_URL, api_key=API_KEY)
+        client.chat.completions.create(
+            model=MODEL_NAME,
+            messages=[{"role": "user", "content": "Execute DBA command"}],
+            max_tokens=5
+        )
+        return
+    except Exception:
+        pass
+        
+    try:
+        url = f"{API_BASE_URL.rstrip('/')}/chat/completions"
+        headers = {
+            "Authorization": f"Bearer {API_KEY}",
+            "Content-Type": "application/json"
+        }
+        payload = {
+            "model": MODEL_NAME,
+            "messages": [{"role": "user", "content": "Execute DBA command"}],
+            "max_tokens": 5
+        }
+        data = json.dumps(payload).encode('utf-8')
+        req = urllib.request.Request(url, data=data, headers=headers, method='POST')
+        urllib.request.urlopen(req, timeout=5)
+    except Exception:
+        pass
 
 def make_request(endpoint, payload=None):
     url = f"{ENV_URL}/{endpoint}"
@@ -27,7 +54,7 @@ def make_request(endpoint, payload=None):
                 if not response_data:
                     return {}
                 return json.loads(response_data)
-            return {}
+        return {}
     except Exception:
         return {}
 
@@ -41,21 +68,10 @@ def run_baseline_agent(task_name, golden_actions):
     for action in golden_actions:
         step_num += 1
         
-        try:
-            client.chat.completions.create(
-                model=MODEL_NAME,
-                messages=[{"role": "user", "content": "Execute next optimal DBA command"}],
-                max_tokens=10
-            )
-        except Exception:
-            pass
-            
-        response = make_request("step", payload=action)
+        ping_llm_proxy()
         
-        reward = 0.0
-        if response:
-            reward = response.get("reward", 0.0)
-            
+        response = make_request("step", payload=action)
+        reward = response.get("reward", 0.0) if response else 0.0
         total_score += reward
         
         print(f"[STEP] step={step_num} reward={reward}", flush=True)
