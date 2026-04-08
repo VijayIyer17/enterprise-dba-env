@@ -9,18 +9,8 @@ MODEL_NAME = os.getenv("MODEL_NAME", "gpt-3.5-turbo")
 ENV_URL = os.getenv("ENV_URL", "http://127.0.0.1:7860")
 
 def ping_llm_proxy():
-    try:
-        from openai import OpenAI
-        client = OpenAI(base_url=API_BASE_URL, api_key=API_KEY)
-        client.chat.completions.create(
-            model=MODEL_NAME,
-            messages=[{"role": "user", "content": "Execute DBA command"}],
-            max_tokens=5
-        )
-        return
-    except Exception:
-        pass
-        
+    # Removed the 'openai' SDK completely to avoid httpx 'proxies' crash.
+    # Using the standard library urllib implementation directly.
     try:
         url = f"{API_BASE_URL.rstrip('/')}/chat/completions"
         headers = {
@@ -35,8 +25,9 @@ def ping_llm_proxy():
         data = json.dumps(payload).encode('utf-8')
         req = urllib.request.Request(url, data=data, headers=headers, method='POST')
         urllib.request.urlopen(req, timeout=5)
-    except Exception:
-        pass
+    except Exception as e:
+        # Added a print statement to silently log failures without crashing the script
+        print(f"[DEBUG] Proxy ping failed: {e}", flush=True)
 
 def make_request(endpoint, payload=None):
     url = f"{ENV_URL}/{endpoint}"
