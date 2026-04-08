@@ -1,6 +1,7 @@
 import os
 import json
 import urllib.request
+import httpx
 from openai import OpenAI
 
 API_BASE_URL = os.getenv("API_BASE_URL", "https://router.huggingface.co/v1")
@@ -9,11 +10,13 @@ MODEL_NAME = os.getenv("MODEL_NAME", "gpt-3.5-turbo")
 ENV_URL = os.getenv("ENV_URL", "http://127.0.0.1:7860")
 
 def ping_llm_proxy():
-    # As per validator rules: Keeping the OpenAI client and wrapping in try/except
     try:
+        # We use a custom client to bypass the openai proxies bug completely
+        custom_http_client = httpx.Client() 
         client = OpenAI(
             base_url=API_BASE_URL,
-            api_key=API_KEY
+            api_key=API_KEY,
+            http_client=custom_http_client
         )
         client.chat.completions.create(
             model=MODEL_NAME,
